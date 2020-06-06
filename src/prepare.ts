@@ -23,20 +23,36 @@ type QueryNames<T extends GraphQLQuery<any, any>> = {
 }
 
 
-type GraphQLResult<Q extends GraphQLQuery<any, any>> = {
-    [P in Q['name']]: Extra2<Q['selects']>
+type GraphQLResult<T extends {}, Q extends GraphQLQuery<any, any>> = {
+    [P in Q['name']]: SubQueryResult<T[Q['name']], Q['selects']>
 }
 
-type Extra2<T> =
-    & { [Z in Filter<Union<T>, string>]: number }
-    & Extra<QueryNames<Filter<Union<T>, GraphQLQuery<any, any>>>>
+type SubQueryResult<T extends {}, Selects> =
+    & { [Z in Filter<Union<Selects>, keyof T>]: T[Z] }
+    & Extra<T, QueryNames<Filter<Union<Selects>, GraphQLQuery<any, any>>>>
 
-type Extra<T> = {
-    [P in keyof T]: T[P] extends GraphQLQuery<any, infer J> ? Extra2<J> : never
+type Extra<T extends {}, QueryMap> = {
+    [P in Filter<keyof QueryMap, keyof T>]: QueryMap[P] extends GraphQLQuery<any, infer J> ? SubQueryResult<T[P], J> : never
 }
 
-function run<Q extends GraphQLQuery<any, any>>(query: Q): GraphQLResult<Q> {
+function run<T, Q extends GraphQLQuery<any, any>>(query: Q): GraphQLResult<Schema, Q> {
     return {} as any
+}
+
+type Schema = {
+    movie: {
+        title: string
+        characters: {
+            name: string
+            friends: {
+                relation: string
+            }
+        }
+        reviews: {
+            rating: number
+            website: string
+        }
+    }
 }
 
 const t1 = prepare('movie' as const, {},
@@ -50,13 +66,10 @@ const t1 = prepare('movie' as const, {},
     prepare('reviews' as const, {},
         'rating' as const,
         'website' as const,
-        prepare('friends' as const, {},
-            'relation' as const
-        )
     )
 )
 
 const t2 = run(t1)
-t2.movie.reviews.friends.relation
-t2.movie.characters
+t2.movie.reviews.rating
+t2.movie.characters.friends.relation
 t2.movie.title
