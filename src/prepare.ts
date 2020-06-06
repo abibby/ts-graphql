@@ -35,41 +35,41 @@ type Extra<T extends {}, QueryMap> = {
     [P in Filter<keyof QueryMap, keyof T>]: QueryMap[P] extends GraphQLQuery<any, infer J> ? SubQueryResult<T[P], J> : never
 }
 
-function run<T, Q extends GraphQLQuery<any, any>>(query: Q): GraphQLResult<Schema, Q> {
-    return {} as any
-}
+// function run<T, Q extends GraphQLQuery<any, any>>(query: Q): GraphQLResult<Schema, Q> {
+//     return {} as any
+// }
 
-type Schema = {
-    movie: {
-        title: string
-        characters: {
-            name: string
-            friends: {
-                relation: string
-            }
-        }
-        reviews: {
-            rating: number
-            website: string
-        }
-    }
-}
+// type Schema = {
+//     movie: {
+//         title: string
+//         characters: {
+//             name: string
+//             friends: {
+//                 relation: string
+//             }
+//         }
+//         reviews: {
+//             rating: number
+//             website: string
+//         }
+//     }
+// }
 
-const t1 = prepare('movie' as const, {},
-    'title' as const,
-    prepare('characters' as const, {},
-        'name' as const,
-        prepare('friends' as const, {},
-            'relation'
-        )
-    ),
-    prepare('reviews' as const, {},
-        'rating' as const,
-        'website' as const,
-    )
-)
+// const t1 = prepare('movie', {},
+//     'title',
+//     prepare('characters', {},
+//         'name',
+//         prepare('friends', {},
+//             'relation'
+//         )
+//     ),
+//     prepare('reviews', {},
+//         'rating' as const,
+//         'website' as const,
+//     )
+// )
 
-const t2 = run(t1)
-t2.movie.reviews.rating
-t2.movie.characters.friends.relation
-t2.movie.title
+// const t2 = run(t1)
+// t2.movie.reviews.rating
+// t2.movie.characters.friends.relation
+// t2.movie.title

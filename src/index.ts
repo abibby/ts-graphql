@@ -2,14 +2,14 @@ import { GraphQLQuery } from "./prepare"
 
 
 
-export function generate(query: GraphQLQuery) {
+export function generate(query: GraphQLQuery<any, any[]>) {
     let gql = query.name
 
     if (Object.keys(query.args).length > 0) {
         gql += '(' + Object.entries(query.args).map(([prop, value]) => prop + ":" + serialize(value)).join(', ') + ')'
     }
 
-    gql += '{\n' + increaseTab(query.selects.map(select => {
+    gql += ' {\n' + increaseTab(query.selects.map(select => {
         if (typeof select === 'string') {
             return select
         }
@@ -42,12 +42,12 @@ export async function fetchQuery(query: string, variables: any): Promise<Respons
     return r
 }
 
-export function run(query: GraphQLQuery) {
+export function run(query: GraphQLQuery<any, any>) {
     return fetchQuery(generate(query), {})
 }
 
 function increaseTab(code: string): string {
-    return code.split('\n').map(line => '    ' + line).join('\n')
+    return code.split('\n').map(line => '  ' + line).join('\n')
 }
 
 
