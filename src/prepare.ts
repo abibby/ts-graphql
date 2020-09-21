@@ -4,17 +4,6 @@ export interface GraphQLQuery<Name extends string, Selects extends Array<string 
     selects: Selects
 }
 
-export function prepare<
-    Name extends string,
-    Selects extends Array<string | GraphQLQuery<any, any>>
->(
-    name: Name,
-    args: { [arg: string]: unknown },
-    ...selects: Selects
-): GraphQLQuery<Name, Selects> {
-    return { name, args, selects }
-}
-
 type Union<T> = T extends Array<infer U> ? U : never
 
 type Filter<T, U> = T extends U ? T : never;  // Remove types from T that are not assignable to U
@@ -23,53 +12,42 @@ type QueryNames<T extends GraphQLQuery<any, any>> = {
 }
 
 
-type GraphQLResult<T extends {}, Q extends GraphQLQuery<any, any>> = {
-    [P in Q['name']]: SubQueryResult<T[Q['name']], Q['selects']>
+type GraphQLResult<Schema extends {}, Query extends GraphQLQuery<any, any>> = {
+    [P in Query['name']]: SubQueryResult<Schema[Query['name']], Query['selects']>
 }
 
 type SubQueryResult<T extends {}, Selects> =
-    & { [Z in Filter<Union<Selects>, keyof T>]: T[Z] }
-    & Extra<T, QueryNames<Filter<Union<Selects>, GraphQLQuery<any, any>>>>
+    T extends Array<infer U>
+    ? Array<SubQueryResultType<U, Selects>>
+    : SubQueryResultType<T, Selects>
 
 type Extra<T extends {}, QueryMap> = {
-    [P in Filter<keyof QueryMap, keyof T>]: QueryMap[P] extends GraphQLQuery<any, infer J> ? SubQueryResult<T[P], J> : never
+    [P in Filter<keyof QueryMap, keyof T>]:
+    QueryMap[P] extends GraphQLQuery<any, infer J>
+    ? (
+        T[P] extends infer V | null | undefined
+        ? SubQueryResult<V, J> | null | undefined
+        : T[P] extends infer V | null
+        ? SubQueryResult<V, J> | null
+        : T[P] extends infer V | undefined
+        ? SubQueryResult<V, J> | undefined
+        : SubQueryResult<T[P], J>
+    )
+    : never
 }
 
-// function run<T, Q extends GraphQLQuery<any, any>>(query: Q): GraphQLResult<Schema, Q> {
-//     return {} as any
-// }
+type SubQueryResultType<T extends {}, Selects> =
+    & Pick<T, Filter<Union<Selects>, keyof T>>
+    & Extra<T, QueryNames<Filter<Union<Selects>, GraphQLQuery<any, any>>>>
 
-// type Schema = {
-//     movie: {
-//         title: string
-//         characters: {
-//             name: string
-//             friends: {
-//                 relation: string
-//             }
-//         }
-//         reviews: {
-//             rating: number
-//             website: string
-//         }
-//     }
-// }
+export function runFactory<Schema>(): <Q extends GraphQLQuery<any, any>>(query: Q) => GraphQLResult<Schema, Q> {
+    return () => {
+        return {} as any
+    }
+}
 
-// const t1 = prepare('movie', {},
-//     'title',
-//     prepare('characters', {},
-//         'name',
-//         prepare('friends', {},
-//             'relation'
-//         )
-//     ),
-//     prepare('reviews', {},
-//         'rating' as const,
-//         'website' as const,
-//     )
-// )
-
-// const t2 = run(t1)
-// t2.movie.reviews.rating
-// t2.movie.characters.friends.relation
-// t2.movie.title
+export const prepareFactory = <T, Args extends {}, Name extends string>(name: Name) =>
+    (args: Args) =>
+        <Selects extends Array<(keyof T & string) | GraphQLQuery<keyof T & string, any>>>(
+            ...selects: Selects
+        ): GraphQLQuery<Name, Selects> => ({ name, args, selects })
